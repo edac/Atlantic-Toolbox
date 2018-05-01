@@ -114,16 +114,10 @@ class Atlantic_Canopy_Classifier(object):
                       height, lidarvalue, binningmethod, rasterouttype, samplingtype, samplingvalue]
         return parameters
 
-    def isLicensed(self):  # optional
-        return True
-
-    def updateMessages(self, parameters):
-        return
 
     def execute(self, parameters, messages):
         arcpy.AddMessage("Checkout the Spatial extension.")
         arcpy.CheckOutExtension('Spatial')
-       # arcpy.SetProgressor("default", "Working...", 0, 2, 1)
         env.workspace = arcpy.env.scratchFolder
         lasfolder = parameters[0].valueAsText
         demfile = parameters[1].valueAsText
@@ -132,8 +126,6 @@ class Atlantic_Canopy_Classifier(object):
         spectral_detail = parameters[4].valueAsText
         spatial_detail = parameters[5].valueAsText
         min_segment_size = parameters[6].valueAsText
-       # band_indexes = ""
-      #  height = parameters[7].valueAsText
         lidarval = parameters[8].valueAsText
         binningmethod = parameters[9].valueAsText
         data_type = parameters[10].valueAsText
@@ -153,13 +145,8 @@ class Atlantic_Canopy_Classifier(object):
         CanopyList=""
         for x in range(1, 6):
 
-            #arcpy.AddMessage("Creating output file variable")
-            # outputfile = os.path.join(fulloutfolder, "r"+str(x)+".tif")
-            #arcpy.AddMessage("Create a unique name in the specified workspace")
             lasLyr = arcpy.CreateUniqueName(str(x))
-            #arcpy.AddMessage("Create a LAS dataset layer that can apply filters to our LAS points")
             arcpy.management.MakeLasDatasetLayer(os.path.join(lasfolder, "atlantic.lasd"), lasLyr, class_code=1, return_values=str(x))
-            #arcpy.AddMessage("Create variable for output image location.")
             outimg = os.path.join(fulloutfolder, "r"+str(x)+".img")
             arcpy.AddMessage("Convert the LAS dataset to a raster for return " +str(x)+ ".")
             arcpy.conversion.LasDatasetToRaster(
@@ -167,8 +154,6 @@ class Atlantic_Canopy_Classifier(object):
             outSetNull = SetNull(outimg, outimg, "VALUE <= 0")
             arcpy.AddMessage("Saving "+os.path.join(fulloutfolder, "return"+str(x)+".img"))
             arcpy.CopyRaster_management(outSetNull,os.path.join(fulloutfolder, "return"+str(x)+".img"),"DEFAULTS","","","","","8_BIT_UNSIGNED")
-            # outSetNull.save(os.path.join(
-            #     fulloutfolder, "return"+str(x)+".img"))
             arcpy.AddMessage("Checkout the Spatial extension.")
             arcpy.CheckOutExtension('Spatial')
             arcpy.AddMessage(
@@ -179,89 +164,73 @@ class Atlantic_Canopy_Classifier(object):
             outSetNull = SetNull(outMinus, outMinus, "VALUE <= 0")
             arcpy.AddMessage(
                 "Save the image that has newly converted Null values")
-            # outSetNull
-            #CompositeList = CompositeList + \
-            #    os.path.join(fulloutfolder, "r"+str(x)+"canopy.img; ")
             rout=os.path.join(fulloutfolder, "r"+str(x)+"canopy.img")
             CanopyList=CanopyList+rout+";"
             arcpy.CopyRaster_management(outSetNull,rout,"DEFAULTS","","","","","8_BIT_UNSIGNED")
-            # outSetNull.save(os.path.join(
-            #     fulloutfolder, "r"+str(x)+"canopy.img"))
                 
         arcpy.AddMessage(
             "Segment Mean Shift phase. This will take some time. Be patient.")
         seg_raster = SegmentMeanShift(
             os.path.join(
                 fulloutfolder, "r1canopy.img"), spectral_detail, spatial_detail,  min_segment_size)
-        arcpy.AddMessage("1")
         arcpy.CopyRaster_management(seg_raster,os.path.join(fulloutfolder,  "isobj.img"),"DEFAULTS","","","","","8_BIT_UNSIGNED")
-        arcpy.AddMessage("2")
-
-        # seg_raster.save(os.path.join(
-        #     fulloutfolder, "isobj.img"))
         outPolygons = os.path.join(fulloutfolder, "Polygons.shp")
-        arcpy.AddMessage("3")
-      #  field = "VALUE"
         arcpy.RasterToPolygon_conversion(
             os.path.join(
                 fulloutfolder, "isobj.img"), outPolygons, "NO_SIMPLIFY")
-        arcpy.AddMessage("4")
         outZonalStats = ZonalStatistics(
             outPolygons, "ID", os.path.join(
                 fulloutfolder, "r1canopy.img"), "MEAN", "NODATA")
-        arcpy.AddMessage("5")
-        # outZonalStats.save(os.path.join(
-        #     fulloutfolder, "canpyht.img"))
-        arcpy.CopyRaster_management(outZonalStats,os.path.join(fulloutfolder,  "canpyht.img"),"DEFAULTS","","","","","8_BIT_UNSIGNED")
-        arcpy.AddMessage("6")
-        #ndviinput = airphoto
-    #    ndvioutput = os.path.join(fulloutfolder, "NDVI-")
+        canpyht=os.path.join(fulloutfolder,  "canpyht.img")
+        arcpy.CopyRaster_management(outZonalStats,canpyht,"DEFAULTS","","","","","8_BIT_UNSIGNED")
         
-
-        # use the input file as a workspace to get the bands.
         arcpy.env.workspace = ndviinput
-        arcpy.AddMessage("7")
         bands = [Raster(os.path.join(ndviinput, b))
                         for b in arcpy.ListRasters()]
-        arcpy.AddMessage("8")
         arcpy.AddMessage(bands)
-        arcpy.AddMessage("9")
-        # for band in bands:
-        #     arcpy.AddMessage(band)
-        #CompositeList=ndviinput+";"
-        #CompositeList = CompositeList+bands[0]+";"+bands[1]+";"+bands[2]+";"+bands[3]+";"
-        # switch to default workspace
-        # env.workspace = arcpy.env.scratchFolder
-        # create and save the ndvi
-        # red = ndvioutput+"red-"+ndviinput
-        arcpy.AddMessage("a")
+
+        CompositeList=ndviinput+";"
+
         red = os.path.join(fulloutfolder, "NDVI-red.img")
-        arcpy.AddMessage("b")
         CompositeList = CompositeList+red+";"
-        arcpy.AddMessage("c")
-        # ndvioutput+"blue-"+ndviinput
         blue = os.path.join(fulloutfolder, "NDVI-blue.img")
-        arcpy.AddMessage("d")
         CompositeList = CompositeList+blue+";"
-        arcpy.AddMessage("e")
         CompositeList = CompositeList+CanopyList
-        arcpy.AddMessage("f")
         arcpy.AddMessage(CompositeList)
-        arcpy.AddMessage("g")
         arcpy.AddMessage("Generate red band ndvi")
         ndvired = ((((Float(bands[3]) - Float(bands[0])) /
                    (Float(bands[3]) + Float(bands[0])))+1)*100)
-        # ndvired.save(red)
-        arcpy.AddMessage("h")
         arcpy.CopyRaster_management(ndvired,red,"DEFAULTS","","","","","8_BIT_UNSIGNED")
-        arcpy.AddMessage("i")
         arcpy.AddMessage("Generate blue band ndvi")
         ndviblue = (
             (((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
-        # ndviblue.save(blue)
-        arcpy.AddMessage("j")
         arcpy.CopyRaster_management(ndviblue,blue,"DEFAULTS","","","","","8_BIT_UNSIGNED")
-        arcpy.AddMessage("k")
-        arcpy.CompositeBands_management(CompositeList, os.path.join(fulloutfolder, "compbands.img"))
+        arcpy.AddMessage("Create composite image.")
+        compbands=os.path.join(fulloutfolder, "compbands.img")
+        arcpy.CompositeBands_management(CompositeList, compbands)
+        #stratify according to the height
+        arcpy.AddMessage("stratify composite image according to the height")
+
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 15")
+        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte15ft.img"))
+
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 6 AND VALUE <15;")
+        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte6andlt15ft.img"))
+
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 4 AND VALUE <6;")
+        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte4andlt6ft.img"))
+
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 1 AND VALUE <4;")
+        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte1andlt4ft.img"))
+
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE <1;")
+        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandslt1ft.img"))
+
+
         arcpy.AddMessage("Finished!")
         return
