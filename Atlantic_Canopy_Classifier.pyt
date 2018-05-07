@@ -16,13 +16,36 @@ class Toolbox(object):
         self.alias = "Atlantic ArcGIS Toolbox"
 
         # List of tool classes associated with this toolbox
-        self.tools = [Atlantic_Canopy_Classifier]
-
-
+        self.tools = [Atlantic_Canopy_Extractor, Atlantic_Canopy_Classifier]
+        
 class Atlantic_Canopy_Classifier(object):
     def __init__(self):
         self.label = "Atlantic_Canopy_Classifier"
         self.description = "This tool will Classify Canopies"
+        self.canRunInBackground = False
+    def getParameterInfo(self):
+        canopyfile = arcpy.Parameter(displayName="Canopy Input File", name="canopyfile", datatype="DEFile", parameterType="Required", direction="Input")
+        straining_sites = arcpy.Parameter(displayName="Straining Sites", name="straining_sites", datatype="DEFile", parameterType="Required", direction="Input")
+        parameters = [canopyfile,straining_sites]
+        return parameters
+    def execute(self, parameters, messages):
+        # env.workspace = arcpy.env.scratchFolder
+        canopyfile = parameters[0].valueAsText
+        straining_sites = parameters[1].valueAsText
+        
+        outfolder=os.path.dirname(os.path.abspath(canopyfile))
+        outecd=os.path.join(outfolder,os.path.splitext(os.path.basename(canopyfile))[0]+'.ecd')
+        TrainRandomTreesClassifier(canopyfile,straining_sites, outecd, "", "50", "30", "1000", "COLOR;MEAN")
+        classimg=ClassifyRaster(canopyfile,outecd)
+        classimg.save(os.path.join(outfolder,os.path.splitext(os.path.basename(canopyfile))[0]+'_class.img'))
+        arcpy.AddMessage(outecd)
+        
+
+
+class Atlantic_Canopy_Extractor(object):
+    def __init__(self):
+        self.label = "Atlantic_Canopy_Extractor"
+        self.description = "This tool will extract canopies"
         self.canRunInBackground = False
 
     def getParameterInfo(self):
@@ -40,11 +63,11 @@ class Atlantic_Canopy_Classifier(object):
         spectral_detail = arcpy.Parameter(displayName="Spectral Detail", name="spectral_detail", datatype="GPDouble",
                                           parameterType="Required", direction="Input", category="Segment Mean Shift Parameters")
       # setting default value
-        spectral_detail.value = 15.5
+        spectral_detail.value = 20
         spatial_detail = arcpy.Parameter(displayName="Spatial Detail", name="spatial_detail", datatype="GPLong",
                                          parameterType="Required", direction="Input", category="Segment Mean Shift Parameters")
       # setting default value
-        spatial_detail.value = 15
+        spatial_detail.value = 20
         min_segment_size = arcpy.Parameter(displayName="Min Segment Size", name="min_segment_size", datatype="GPLong",
                                            parameterType="Required", direction="Input", category="Segment Mean Shift Parameters")
       # setting default value
@@ -169,7 +192,7 @@ class Atlantic_Canopy_Classifier(object):
             arcpy.CopyRaster_management(outSetNull,rout,"DEFAULTS","","","","","8_BIT_UNSIGNED")
                 
         arcpy.AddMessage(
-            "Segment Mean Shift phase. This will take some time. Be patient.")
+            "Segment Mean Shift phase.")
         seg_raster = SegmentMeanShift(
             os.path.join(
                 fulloutfolder, "r1canopy.img"), spectral_detail, spatial_detail,  min_segment_size)
@@ -209,26 +232,34 @@ class Atlantic_Canopy_Classifier(object):
         compbands=os.path.join(fulloutfolder, "compbands.img")
         arcpy.CompositeBands_management(CompositeList, compbands)
         #stratify according to the height
+        env.workspace = arcpy.env.scratchFolder
         arcpy.AddMessage("stratify composite image according to the height")
 
-        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 15")
-        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 15")
+        # Outsetnull.save(os.path.join(fulloutfolder, "mask1.img"))
+        maskfile=os.path.join(fulloutfolder, "mask1.img")
+        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte15ft.img"))
 
-        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 6 AND VALUE <15;")
-        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 6 OR VALUE > 15")
+        # Outsetnull.save(os.path.join(fulloutfolder, "mask2.img"))
+        maskfile=os.path.join(fulloutfolder, "mask2.img")
+        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte6andlt15ft.img"))
 
-        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 4 AND VALUE <6;")
-        outExtractByMask = ExtractByMask(compbands, Outsetnull)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte4andlt6ft.img"))
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 1 OR VALUE > 6")
+        maskfile=os.path.join(fulloutfolder, "mask3.img")
+        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        outExtractByMask = ExtractByMask(compbands, maskfile)
+        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte1andlt6ft.img"))
 
-        Outsetnull = SetNull(canpyht, canpyht, "VALUE >= 1 AND VALUE <4;")
-        outExtractByMask = ExtractByMask(compbands, Outsetnull)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte1andlt4ft.img"))
 
-        Outsetnull = SetNull(canpyht, canpyht, "VALUE <1;")
-        outExtractByMask = ExtractByMask(compbands, Outsetnull)
+        Outsetnull = SetNull(canpyht, canpyht, "VALUE > 1")
+        maskfile=os.path.join(fulloutfolder, "mask4.img")
+        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(fulloutfolder, "compbandslt1ft.img"))
 
 
