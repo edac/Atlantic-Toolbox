@@ -17,34 +17,11 @@ class Toolbox(object):
 
         # List of tool classes associated with this toolbox
         self.tools = [Atlantic_Canopy_Extractor, Atlantic_Canopy_Classifier]
-        
-class Atlantic_Canopy_Classifier(object):
-    def __init__(self):
-        self.label = "Atlantic_Canopy_Classifier"
-        self.description = "This tool will Classify Canopies"
-        self.canRunInBackground = False
-    def getParameterInfo(self):
-        canopyfile = arcpy.Parameter(displayName="Canopy Input File", name="canopyfile", datatype="DEFile", parameterType="Required", direction="Input")
-        straining_sites = arcpy.Parameter(displayName="Straining Sites", name="straining_sites", datatype="DEFile", parameterType="Required", direction="Input")
-        parameters = [canopyfile,straining_sites]
-        return parameters
-    def execute(self, parameters, messages):
-        # env.workspace = arcpy.env.scratchFolder
-        canopyfile = parameters[0].valueAsText
-        straining_sites = parameters[1].valueAsText
-        
-        outfolder=os.path.dirname(os.path.abspath(canopyfile))
-        outecd=os.path.join(outfolder,os.path.splitext(os.path.basename(canopyfile))[0]+'.ecd')
-        TrainRandomTreesClassifier(canopyfile,straining_sites, outecd, "", "50", "30", "1000", "COLOR;MEAN")
-        classimg=ClassifyRaster(canopyfile,outecd)
-        classimg.save(os.path.join(outfolder,os.path.splitext(os.path.basename(canopyfile))[0]+'_class.img'))
-        arcpy.AddMessage(outecd)
-        
 
 
 class Atlantic_Canopy_Extractor(object):
     def __init__(self):
-        self.label = "Atlantic_Canopy_Extractor"
+        self.label = "Step 1 - Atlantic Canopy Extractor"
         self.description = "This tool will extract canopies"
         self.canRunInBackground = False
 
@@ -56,7 +33,7 @@ class Atlantic_Canopy_Extractor(object):
         demfile = arcpy.Parameter(displayName="DEM  Input File", name="demdir",
                                   datatype="DEFile", parameterType="Required", direction="Input")
         airphoto = arcpy.Parameter(displayName="Aerial photo ", name="airphoto2",
-                                  datatype="DEFile", parameterType="Required", direction="Input")
+                                   datatype="DEFile", parameterType="Required", direction="Input")
         outputdir = arcpy.Parameter(displayName="Output Directory", name="outputdir",
                                     datatype="DEFolder", parameterType="Required", direction="Input")
 
@@ -72,10 +49,7 @@ class Atlantic_Canopy_Extractor(object):
                                            parameterType="Required", direction="Input", category="Segment Mean Shift Parameters")
       # setting default value
         min_segment_size.value = 10
-        height = arcpy.Parameter(displayName="Any value less than or equal to this will be converted to 0", name="height",
-                                 datatype="GPDouble", parameterType="Required", direction="Input", category="Convert Height Parameters")
-      # setting default value
-        height.value = 2.0
+
 
         binningmethod = arcpy.Parameter(
             displayName="Binning Method : BINNING <cell_assignment_type> <void_fill_method>",
@@ -133,10 +107,8 @@ class Atlantic_Canopy_Extractor(object):
                                         parameterType="Required", direction="Input", category="LAS Dataset To Raster Parameters")
         samplingvalue.value = 2
 
-        parameters = [lasfolder, demfile, airphoto, outputdir,  spectral_detail, spatial_detail, min_segment_size,
-                      height, lidarvalue, binningmethod, rasterouttype, samplingtype, samplingvalue]
+        parameters = [lasfolder, demfile, airphoto, outputdir,  spectral_detail, spatial_detail, min_segment_size, lidarvalue, binningmethod, rasterouttype, samplingtype, samplingvalue]
         return parameters
-
 
     def execute(self, parameters, messages):
         arcpy.AddMessage("Checkout the Spatial extension.")
@@ -149,11 +121,11 @@ class Atlantic_Canopy_Extractor(object):
         spectral_detail = parameters[4].valueAsText
         spatial_detail = parameters[5].valueAsText
         min_segment_size = parameters[6].valueAsText
-        lidarval = parameters[8].valueAsText
-        binningmethod = parameters[9].valueAsText
-        data_type = parameters[10].valueAsText
-        sampling_type = parameters[11].valueAsText
-        sampling_value = parameters[12].valueAsText
+        lidarval = parameters[7].valueAsText
+        binningmethod = parameters[8].valueAsText
+        data_type = parameters[9].valueAsText
+        sampling_type = parameters[10].valueAsText
+        sampling_value = parameters[11].valueAsText
         fulloutfolder = os.path.join(
             outfolder, timestamp.strftime('%Y%m%d%H%M%S'))
         CompositeList = ""
@@ -161,20 +133,26 @@ class Atlantic_Canopy_Extractor(object):
         os.mkdir(fulloutfolder)
 
         if not os.path.exists(os.path.join(lasfolder, "atlantic.lasd")):
-             arcpy.AddMessage("Define LAS dataset referencing the current working las file.")
-             arcpy.CreateLasDataset_management(lasfolder, os.path.join(lasfolder, "atlantic.lasd"), create_las_prj="NO_FILES")
-        CanopyList=""
+            arcpy.AddMessage(
+                "Define LAS dataset referencing the current working las file.")
+            arcpy.CreateLasDataset_management(lasfolder, os.path.join(
+                lasfolder, "atlantic.lasd"), create_las_prj="NO_FILES")
+        CanopyList = ""
         for x in range(1, 6):
 
             lasLyr = arcpy.CreateUniqueName(str(x))
-            arcpy.management.MakeLasDatasetLayer(os.path.join(lasfolder, "atlantic.lasd"), lasLyr, class_code=1, return_values=str(x))
+            arcpy.management.MakeLasDatasetLayer(os.path.join(
+                lasfolder, "atlantic.lasd"), lasLyr, class_code=1, return_values=str(x))
             outimg = os.path.join(fulloutfolder, "r"+str(x)+".img")
-            arcpy.AddMessage("Convert the LAS dataset to a raster for return " +str(x)+ ".")
+            arcpy.AddMessage(
+                "Convert the LAS dataset to a raster for return " + str(x) + ".")
             arcpy.conversion.LasDatasetToRaster(
                 lasLyr, outimg, lidarval, binningmethod, data_type, sampling_type, sampling_value, 1)
             outSetNull = SetNull(outimg, outimg, "VALUE <= 0")
-            arcpy.AddMessage("Saving "+os.path.join(fulloutfolder, "return"+str(x)+".img"))
-            arcpy.CopyRaster_management(outSetNull,os.path.join(fulloutfolder, "return"+str(x)+".img"),"DEFAULTS","","","","","8_BIT_UNSIGNED")
+            arcpy.AddMessage(
+                "Saving "+os.path.join(fulloutfolder, "return"+str(x)+".img"))
+            arcpy.CopyRaster_management(outSetNull, os.path.join(
+                fulloutfolder, "return"+str(x)+".img"), "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
             arcpy.AddMessage("Checkout the Spatial extension.")
             arcpy.CheckOutExtension('Spatial')
             arcpy.AddMessage(
@@ -185,16 +163,18 @@ class Atlantic_Canopy_Extractor(object):
             outSetNull = SetNull(outMinus, outMinus, "VALUE <= 0")
             arcpy.AddMessage(
                 "Save the image that has newly converted Null values")
-            rout=os.path.join(fulloutfolder, "r"+str(x)+"canopy.img")
-            CanopyList=CanopyList+rout+";"
-            arcpy.CopyRaster_management(outSetNull,rout,"DEFAULTS","","","","","8_BIT_UNSIGNED")
-                
+            rout = os.path.join(fulloutfolder, "r"+str(x)+"canopy.img")
+            CanopyList = CanopyList+rout+";"
+            arcpy.CopyRaster_management(
+                outSetNull, rout, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
+
         arcpy.AddMessage(
             "Segment Mean Shift phase.")
         seg_raster = SegmentMeanShift(
             os.path.join(
                 fulloutfolder, "r1canopy.img"), spectral_detail, spatial_detail,  min_segment_size)
-        arcpy.CopyRaster_management(seg_raster,os.path.join(fulloutfolder,  "isobj.img"),"DEFAULTS","","","","","8_BIT_UNSIGNED")
+        arcpy.CopyRaster_management(seg_raster, os.path.join(
+            fulloutfolder,  "isobj.img"), "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         outPolygons = os.path.join(fulloutfolder, "Polygons.shp")
         arcpy.RasterToPolygon_conversion(
             os.path.join(
@@ -202,15 +182,16 @@ class Atlantic_Canopy_Extractor(object):
         outZonalStats = ZonalStatistics(
             outPolygons, "ID", os.path.join(
                 fulloutfolder, "r1canopy.img"), "MEAN", "NODATA")
-        canpyht=os.path.join(fulloutfolder,  "canpyht.img")
-        arcpy.CopyRaster_management(outZonalStats,canpyht,"DEFAULTS","","","","","8_BIT_UNSIGNED")
-        
+        canpyht = os.path.join(fulloutfolder,  "canpyht.img")
+        arcpy.CopyRaster_management(
+            outZonalStats, canpyht, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
+
         arcpy.env.workspace = ndviinput
         bands = [Raster(os.path.join(ndviinput, b))
-                        for b in arcpy.ListRasters()]
+                 for b in arcpy.ListRasters()]
         arcpy.AddMessage(bands)
 
-        CompositeList=ndviinput+";"
+        CompositeList = ndviinput+";"
 
         red = os.path.join(fulloutfolder, "NDVI-red.img")
         CompositeList = CompositeList+red+";"
@@ -220,46 +201,82 @@ class Atlantic_Canopy_Extractor(object):
         arcpy.AddMessage(CompositeList)
         arcpy.AddMessage("Generate red band ndvi")
         ndvired = ((((Float(bands[3]) - Float(bands[0])) /
-                   (Float(bands[3]) + Float(bands[0])))+1)*100)
-        arcpy.CopyRaster_management(ndvired,red,"DEFAULTS","","","","","8_BIT_UNSIGNED")
+                     (Float(bands[3]) + Float(bands[0])))+1)*100)
+        arcpy.CopyRaster_management(
+            ndvired, red, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Generate blue band ndvi")
         ndviblue = (
             (((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
-        arcpy.CopyRaster_management(ndviblue,blue,"DEFAULTS","","","","","8_BIT_UNSIGNED")
+        arcpy.CopyRaster_management(
+            ndviblue, blue, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Create composite image.")
-        compbands=os.path.join(fulloutfolder, "compbands.img")
+        compbands = os.path.join(fulloutfolder, "compbands.img")
         arcpy.CompositeBands_management(CompositeList, compbands)
-        #stratify according to the height
+        # stratify according to the height
         env.workspace = arcpy.env.scratchFolder
         arcpy.AddMessage("stratify composite image according to the height")
 
         Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 15")
         # Outsetnull.save(os.path.join(fulloutfolder, "mask1.img"))
-        maskfile=os.path.join(fulloutfolder, "mask1.img")
-        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        maskfile = os.path.join(fulloutfolder, "mask1.img")
+        arcpy.CopyRaster_management(
+            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
         outExtractByMask = ExtractByMask(compbands, maskfile)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte15ft.img"))
+        outExtractByMask.save(os.path.join(
+            fulloutfolder, "compbandsgte15ft.img"))
 
         Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 6 OR VALUE > 15")
         # Outsetnull.save(os.path.join(fulloutfolder, "mask2.img"))
-        maskfile=os.path.join(fulloutfolder, "mask2.img")
-        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        maskfile = os.path.join(fulloutfolder, "mask2.img")
+        arcpy.CopyRaster_management(
+            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
         outExtractByMask = ExtractByMask(compbands, maskfile)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte6andlt15ft.img"))
+        outExtractByMask.save(os.path.join(
+            fulloutfolder, "compbandsgte6andlt15ft.img"))
 
         Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 1 OR VALUE > 6")
-        maskfile=os.path.join(fulloutfolder, "mask3.img")
-        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        maskfile = os.path.join(fulloutfolder, "mask3.img")
+        arcpy.CopyRaster_management(
+            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
         outExtractByMask = ExtractByMask(compbands, maskfile)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandsgte1andlt6ft.img"))
-
+        outExtractByMask.save(os.path.join(
+            fulloutfolder, "compbandsgte1andlt6ft.img"))
 
         Outsetnull = SetNull(canpyht, canpyht, "VALUE > 1")
-        maskfile=os.path.join(fulloutfolder, "mask4.img")
-        arcpy.CopyRaster_management(Outsetnull,maskfile,"DEFAULTS","","0","","","8_BIT_UNSIGNED")
+        maskfile = os.path.join(fulloutfolder, "mask4.img")
+        arcpy.CopyRaster_management(
+            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
         outExtractByMask = ExtractByMask(compbands, maskfile)
-        outExtractByMask.save(os.path.join(fulloutfolder, "compbandslt1ft.img"))
-
+        outExtractByMask.save(os.path.join(
+            fulloutfolder, "compbandslt1ft.img"))
 
         arcpy.AddMessage("Finished!")
         return
+class Atlantic_Canopy_Classifier(object):
+    def __init__(self):
+        self.label = "Step 2 - Atlantic Canopy Classifier"
+        self.description = "This tool will Classify Canopies"
+        self.canRunInBackground = False
+
+    def getParameterInfo(self):
+        canopyfile = arcpy.Parameter(displayName="Canopy Input File", name="canopyfile",
+                                     datatype="DEFile", parameterType="Required", direction="Input")
+        straining_sites = arcpy.Parameter(displayName="Straining Sites", name="straining_sites",
+                                          datatype="DEFile", parameterType="Required", direction="Input")
+        parameters = [canopyfile, straining_sites]
+        return parameters
+
+    def execute(self, parameters, messages):
+        # env.workspace = arcpy.env.scratchFolder
+        canopyfile = parameters[0].valueAsText
+        straining_sites = parameters[1].valueAsText
+
+        outfolder = os.path.dirname(os.path.abspath(canopyfile))
+        outecd = os.path.join(outfolder, os.path.splitext(
+            os.path.basename(canopyfile))[0]+'.ecd')
+        TrainRandomTreesClassifier(
+            canopyfile, straining_sites, outecd, "", "50", "30", "1000", "COLOR;MEAN")
+        classimg = ClassifyRaster(canopyfile, outecd)
+        classimg.save(os.path.join(outfolder, os.path.splitext(
+            os.path.basename(canopyfile))[0]+'_class.img'))
+        arcpy.AddMessage(outecd)
