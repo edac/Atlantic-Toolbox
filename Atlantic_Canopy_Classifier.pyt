@@ -160,11 +160,9 @@ class Atlantic_Canopy_Extractor(object):
         arcpy.AddMessage("Creating output folder")
         os.mkdir(fulloutfolder)
 
-        if not os.path.exists(os.path.join(lasfolder, "Atlantic_Canopy_Classifier.lasd")):
-            arcpy.AddMessage(
-                "Define LAS dataset referencing the current working las file.")
-            arcpy.CreateLasDataset_management(lasfolder, os.path.join(
-                lasfolder, "Atlantic_Canopy_Classifier.lasd"), create_las_prj="NO_FILES")
+        if not os.path.exists(os.path.join(lasfolder, "atlantic.lasd")):
+             arcpy.AddMessage("Define LAS dataset referencing the current working las file.")
+             arcpy.CreateLasDataset_management(lasfolder, os.path.join(lasfolder, "atlantic.lasd"), create_las_prj="NO_FILES")
         CanopyList=""
         for x in range(1, 6):
 
