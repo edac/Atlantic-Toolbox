@@ -200,15 +200,13 @@ class Atlantic_Canopy_Extractor(object):
         CompositeList = CompositeList+CanopyList
         arcpy.AddMessage(CompositeList)
         arcpy.AddMessage("Generate red band ndvi")
-        ndvired = ((((Float(bands[3]) - Float(bands[0])) /
-                     (Float(bands[3]) + Float(bands[0])))+1)*100)
-        arcpy.CopyRaster_management(
-            ndvired, red, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
+        ndvired = ((((Float(bands[3]) - Float(bands[0])) / (Float(bands[3]) + Float(bands[0])))+1)*100)
+        arcpy.AddMessage("Saving red band ndvi")
+        arcpy.CopyRaster_management(ndvired, red, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Generate blue band ndvi")
-        ndviblue = (
-            (((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
-        arcpy.CopyRaster_management(
-            ndviblue, blue, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
+        ndviblue = ((((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
+        arcpy.AddMessage("Saving blue band ndvi"
+        arcpy.CopyRaster_management(ndviblue, blue, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Create composite image.")
         compbands = os.path.join(fulloutfolder, "compbands.img")
         arcpy.CompositeBands_management(CompositeList, compbands)
@@ -259,9 +257,9 @@ class Atlantic_Canopy_Classifier(object):
         self.canRunInBackground = False
 
     def getParameterInfo(self):
-        canopyfile = arcpy.Parameter(displayName="Canopy Input File", name="canopyfile",
+        canopyfile = arcpy.Parameter(displayName="Stratified Canopy Image", name="canopyfile",
                                      datatype="DEFile", parameterType="Required", direction="Input")
-        straining_sites = arcpy.Parameter(displayName="Straining Sites", name="straining_sites",
+        straining_sites = arcpy.Parameter(displayName="Training Sites Shapefile", name="straining_sites",
                                           datatype="DEFile", parameterType="Required", direction="Input")
         parameters = [canopyfile, straining_sites]
         return parameters
