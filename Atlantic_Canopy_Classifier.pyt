@@ -205,7 +205,7 @@ class Atlantic_Canopy_Extractor(object):
         arcpy.CopyRaster_management(ndvired, red, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Generate blue band ndvi")
         ndviblue = ((((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
-        arcpy.AddMessage("Saving blue band ndvi"
+        arcpy.AddMessage("Saving blue band ndvi")
         arcpy.CopyRaster_management(ndviblue, blue, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
         arcpy.AddMessage("Create composite image.")
         compbands = os.path.join(fulloutfolder, "compbands.img")
