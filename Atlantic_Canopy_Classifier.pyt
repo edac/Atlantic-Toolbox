@@ -7,7 +7,7 @@ from time import sleep
 from arcpy.sa import *
 
 
-timestamp = datetime.datetime.now()
+timestamp = datetime.datetime.now() 
 
 
 class Toolbox(object):
@@ -59,7 +59,7 @@ class Atlantic_Canopy_Extractor(object):
             direction="Input",
             category="LAS Dataset To Raster Parameters"
         )
-        binningmethod.value = "BINNING MINIMUM NONE"
+        binningmethod.value = "BINNING MAXIMUM NONE"
         binningmethod.filter.type = "ValueList"
         binningmethod.filter.list = ["BINNING AVERAGE NONE", "BINNING AVERAGE SIMPLE", "BINNING AVERAGE LINEAR", "BINNING AVERAGE NATURAL_NEIGHBOR", "BINNING MINIMUM NONE", "BINNING MINIMUM SIMPLE", "BINNING MINIMUM LINEAR", "BINNING MINIMUM NATURAL_NEIGHBOR", "BINNING MAXIMUM NONE",
                                      "BINNING MAXIMUM SIMPLE", "BINNING MAXIMUM LINEAR", "BINNING MAXIMUM NATURAL_NEIGHBOR", "BINNING IDW NONE", "BINNING IDW SIMPLE", "BINNING IDW LINEAR", "BINNING IDW NATURAL_NEIGHBOR", "BINNING NEAREST NONE", "BINNING NEAREST SIMPLE", "BINNING NEAREST LINEAR", "BINNING NEAREST NATURAL_NEIGHBOR"]
@@ -111,9 +111,12 @@ class Atlantic_Canopy_Extractor(object):
         return parameters
 
     def execute(self, parameters, messages):
+        environments=arcpy.ListEnvironments()
+        for environment in environments:
+                arcpy.AddMessage("{0:<30}: {1}".format(environment, arcpy.env[environment]))
         arcpy.AddMessage("Checkout the Spatial extension.")
         arcpy.CheckOutExtension('Spatial')
-        env.workspace = arcpy.env.scratchFolder
+        #env.pace = arcpy.env.scratchFolder
         lasfolder = parameters[0].valueAsText
         demfile = parameters[1].valueAsText
         ndviinput = parameters[2].valueAsText
@@ -187,38 +190,74 @@ class Atlantic_Canopy_Extractor(object):
             outZonalStats, canpyht, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
 
         arcpy.env.workspace = ndviinput
-        bands = [Raster(os.path.join(ndviinput, b))
+        bands = [os.path.join(ndviinput, b)
                  for b in arcpy.ListRasters()]
-        arcpy.AddMessage(bands)
+        #arcpy.AddMessage(bands)
 
         CompositeList = ndviinput+";"
 
-        red = os.path.join(fulloutfolder, "NDVI-red.img")
-        CompositeList = CompositeList+red+";"
-        blue = os.path.join(fulloutfolder, "NDVI-blue.img")
-        CompositeList = CompositeList+blue+";"
+       
+        env.workspace = arcpy.GetSystemEnvironment("TEMP")
+        NIR = bands[3]
+        Red = bands[0]
+        Blue = bands[2]
+        NIR_out = "NIR.img"
+        Red_out = "Red.img"
+        Blue_out = "Blue.img"
+        ndviredout=os.path.join(fulloutfolder, "NDVI-red.img")
+        ndviblueout=os.path.join(fulloutfolder, "NDVI-blue.img")
+        arcpy.CopyRaster_management(NIR, NIR_out)
+        arcpy.CopyRaster_management(Red, Red_out)
+        arcpy.CopyRaster_management(Blue, Blue_out)
+        # Red
+        Num = arcpy.sa.Float(Raster(NIR_out) - Raster(Red_out))
+        Denom = arcpy.sa.Float(Raster(NIR_out) + Raster(Red_out))
+        NIR_eq = arcpy.sa.Divide(Num, Denom)
+        NIR_eq2 = (NIR_eq+1)*100
+        NIR_eq2.save(ndviredout)
+        
+        
+        # Blue
+        Num = arcpy.sa.Float(Raster(NIR_out) - Raster(Blue_out))
+        Denom = arcpy.sa.Float(Raster(NIR_out) + Raster(Blue_out))
+        NIR_eq = arcpy.sa.Divide(Num, Denom)
+        NIR_eq2 = (NIR_eq+1)*100
+        NIR_eq2.save(ndviblueout)
+
+        #Cleanup    
+        arcpy.Delete_management(NIR_out)
+        arcpy.Delete_management(Red_out)
+        arcpy.Delete_management(Blue_out)
+        arcpy.ResetEnvironments()
+        CompositeList = CompositeList+ndviredout+";"
+        CompositeList = CompositeList+ndviblueout+";"
         CompositeList = CompositeList+CanopyList
-        arcpy.AddMessage(CompositeList)
-        arcpy.AddMessage("Generate red band ndvi")
-        ndvired = ((((Float(bands[3]) - Float(bands[0])) / (Float(bands[3]) + Float(bands[0])))+1)*100)
-        arcpy.AddMessage("Saving red band ndvi")
-        arcpy.CopyRaster_management(ndvired, red, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
-        arcpy.AddMessage("Generate blue band ndvi")
-        ndviblue = ((((Float(bands[3]) - Float(bands[2])) / (Float(bands[3]) + Float(bands[2])))+1)*100)
-        arcpy.AddMessage("Saving blue band ndvi")
-        arcpy.CopyRaster_management(ndviblue, blue, "DEFAULTS", "", "", "", "", "8_BIT_UNSIGNED")
+
+        arcpy.env.extent = "MINOF"
         arcpy.AddMessage("Create composite image.")
+        arcpy.AddMessage("CompositeList:")
+        arcpy.AddMessage(CompositeList)
         compbands = os.path.join(fulloutfolder, "compbands.img")
         arcpy.CompositeBands_management(CompositeList, compbands)
         # stratify according to the height
-        env.workspace = arcpy.env.scratchFolder
+
+        arcpy.ResetEnvironments()
         arcpy.AddMessage("stratify composite image according to the height")
+        # gte15=os.path.join(fulloutfolder, "compbandsgte15ft.img")
+        # v6and15=os.path.join(fulloutfolder, "compbandsgte6andlt15ft.img")
+        # v1and6=os.path.join(fulloutfolder, "compbandsgte1andlt6ft.img")
+        # gt1=os.path.join(fulloutfolder, "compbandslt1ft.img")
+        # arcpy.gp.SetNull_sa(canpyht, compbands, gte15, "\"Value\" <=15")
+        # arcpy.gp.SetNull_sa(canpyht, compbands, v6and15, "\"Value\" <=6 OR \"Value\" > 15")
+        # arcpy.gp.SetNull_sa(canpyht, compbands, v1and6, "\"Value\" <=1 OR \"Value\" > 6")
+        # arcpy.gp.SetNull_sa(canpyht, compbands, gt1, "\"Value\" >1")
+
 
         Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 15")
         # Outsetnull.save(os.path.join(fulloutfolder, "mask1.img"))
         maskfile = os.path.join(fulloutfolder, "mask1.img")
         arcpy.CopyRaster_management(
-            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
+            Outsetnull, maskfile, "", "", "0", "", "", "8_BIT_UNSIGNED","")
         outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(
             fulloutfolder, "compbandsgte15ft.img"))
@@ -227,7 +266,7 @@ class Atlantic_Canopy_Extractor(object):
         # Outsetnull.save(os.path.join(fulloutfolder, "mask2.img"))
         maskfile = os.path.join(fulloutfolder, "mask2.img")
         arcpy.CopyRaster_management(
-            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
+            Outsetnull, maskfile, "", "", "0", "", "", "8_BIT_UNSIGNED","")
         outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(
             fulloutfolder, "compbandsgte6andlt15ft.img"))
@@ -235,7 +274,7 @@ class Atlantic_Canopy_Extractor(object):
         Outsetnull = SetNull(canpyht, canpyht, "VALUE <= 1 OR VALUE > 6")
         maskfile = os.path.join(fulloutfolder, "mask3.img")
         arcpy.CopyRaster_management(
-            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
+            Outsetnull, maskfile, "", "", "0", "", "", "8_BIT_UNSIGNED","")
         outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(
             fulloutfolder, "compbandsgte1andlt6ft.img"))
@@ -243,10 +282,10 @@ class Atlantic_Canopy_Extractor(object):
         Outsetnull = SetNull(canpyht, canpyht, "VALUE > 1")
         maskfile = os.path.join(fulloutfolder, "mask4.img")
         arcpy.CopyRaster_management(
-            Outsetnull, maskfile, "DEFAULTS", "", "0", "", "", "8_BIT_UNSIGNED")
+            Outsetnull, maskfile, "", "", "0", "", "", "8_BIT_UNSIGNED","")
         outExtractByMask = ExtractByMask(compbands, maskfile)
         outExtractByMask.save(os.path.join(
-            fulloutfolder, "compbandslt1ft.img"))
+fulloutfolder, "compbandslt1ft.img"))
 
         arcpy.AddMessage("Finished!")
         return
