@@ -201,9 +201,9 @@ class Atlantic_Canopy_Extractor(object):
         NIR = bands[3]
         Red = bands[0]
         Blue = bands[2]
-        NIR_out = "NIR.img"
-        Red_out = "Red.img"
-        Blue_out = "Blue.img"
+        NIR_out = os.path.join(fulloutfolder, "NIR.img")
+        Red_out = os.path.join(fulloutfolder, "Red.img")
+        Blue_out = os.path.join(fulloutfolder, "Blue.img")
         ndviredout=os.path.join(fulloutfolder, "NDVI-red.img")
         ndviblueout=os.path.join(fulloutfolder, "NDVI-blue.img")
         arcpy.CopyRaster_management(NIR, NIR_out)
