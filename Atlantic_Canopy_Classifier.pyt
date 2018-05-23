@@ -135,17 +135,17 @@ class Atlantic_Canopy_Extractor(object):
         arcpy.AddMessage("Creating output folder")
         os.mkdir(fulloutfolder)
 
-        if not os.path.exists(os.path.join(lasfolder, "atlantic.lasd")):
-            arcpy.AddMessage(
-                "Define LAS dataset referencing the current working las file.")
-            arcpy.CreateLasDataset_management(lasfolder, os.path.join(
-                lasfolder, "atlantic.lasd"), create_las_prj="NO_FILES")
+        if os.path.exists(os.path.join(lasfolder, "atlantic.lasd")):
+           newname=os.path.join(lasfolder,"atlantic.lasd."+timestamp.strftime('%Y%m%d%H%M%S'))
+           arcpy.AddMessage("Renaming atlantic.lasd to "+ newname)
+           os.rename(os.path.join(lasfolder, "atlantic.lasd"),newname)
+        arcpy.AddMessage("Define LAS dataset referencing the current working las file.")
+        arcpy.CreateLasDataset_management(lasfolder, os.path.join(lasfolder, "atlantic.lasd"), create_las_prj="NO_FILES")
         CanopyList = ""
         for x in range(1, 6):
 
-            lasLyr = arcpy.CreateUniqueName(str(x))
-            arcpy.management.MakeLasDatasetLayer(os.path.join(
-                lasfolder, "atlantic.lasd"), lasLyr, class_code=1, return_values=str(x))
+            lasLyr = arcpy.CreateUniqueName("Atlantic"+str(x))
+            arcpy.management.MakeLasDatasetLayer(os.path.join(lasfolder, "atlantic.lasd"), lasLyr, class_code=1, return_values=str(x))
             outimg = os.path.join(fulloutfolder, "r"+str(x)+".img")
             arcpy.AddMessage(
                 "Convert the LAS dataset to a raster for return " + str(x) + ".")
