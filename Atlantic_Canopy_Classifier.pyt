@@ -32,7 +32,7 @@ class Atlantic_Canopy_Extractor(object):
                                     datatype="DEFolder", parameterType="Required", direction="Input")
         demfile = arcpy.Parameter(displayName="DEM  Input File", name="demdir",
                                   datatype="DEFile", parameterType="Required", direction="Input")
-        airphoto = arcpy.Parameter(displayName="Aerial photo ", name="airphoto2",
+        airphoto = arcpy.Parameter(displayName="Aerial photo ", name="airphoto",
                                    datatype="DEFile", parameterType="Required", direction="Input")
         outputdir = arcpy.Parameter(displayName="Output Directory", name="outputdir",
                                     datatype="DEFolder", parameterType="Required", direction="Input")
