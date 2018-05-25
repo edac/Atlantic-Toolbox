@@ -32,7 +32,7 @@ class Atlantic_Canopy_Extractor(object):
                                     datatype="DEFolder", parameterType="Required", direction="Input")
         demfile = arcpy.Parameter(displayName="DEM  Input File", name="demdir",
                                   datatype="DEFile", parameterType="Required", direction="Input")
-        airphoto = arcpy.Parameter(displayName="Aerial photo ", name="airphoto",
+        airphoto = arcpy.Parameter(displayName="Aerial Photo", name="airphoto",
                                    datatype="DEFile", parameterType="Required", direction="Input")
         outputdir = arcpy.Parameter(displayName="Output Directory", name="outputdir",
                                     datatype="DEFolder", parameterType="Required", direction="Input")
@@ -52,7 +52,7 @@ class Atlantic_Canopy_Extractor(object):
 
 
         binningmethod = arcpy.Parameter(
-            displayName="Binning Method : BINNING <cell_assignment_type> <void_fill_method>",
+            displayName="Binning Method",
             name="binningmethod",
             datatype="GPString",
             parameterType="Required",
@@ -65,7 +65,7 @@ class Atlantic_Canopy_Extractor(object):
                                      "BINNING MAXIMUM SIMPLE", "BINNING MAXIMUM LINEAR", "BINNING MAXIMUM NATURAL_NEIGHBOR", "BINNING IDW NONE", "BINNING IDW SIMPLE", "BINNING IDW LINEAR", "BINNING IDW NATURAL_NEIGHBOR", "BINNING NEAREST NONE", "BINNING NEAREST SIMPLE", "BINNING NEAREST LINEAR", "BINNING NEAREST NATURAL_NEIGHBOR"]
 
         lidarvalue = arcpy.Parameter(
-            displayName="The lidar data that will be used to generate the raster output.",
+            displayName="LiDAR Attribute Used To Create DSM",
             name="lidarvalue",
             datatype="GPString",
             parameterType="Required",
@@ -78,7 +78,7 @@ class Atlantic_Canopy_Extractor(object):
         lidarvalue.filter.list = ["ELEVATION", "INTENSITY"]
 
         rasterouttype = arcpy.Parameter(
-            displayName="The raster output value type.",
+            displayName="Raster Data Type",
             name="rasterouttype",
             datatype="GPString",
             parameterType="Required",
@@ -91,7 +91,7 @@ class Atlantic_Canopy_Extractor(object):
         rasterouttype.filter.list = ["INT", "FLOAT"]
 
         samplingtype = arcpy.Parameter(
-            displayName="method used for interpreting the Sampling Value",
+            displayName="Sampling Method",
             name="samplingtype",
             datatype="GPString",
             parameterType="Required",
@@ -103,7 +103,7 @@ class Atlantic_Canopy_Extractor(object):
         samplingtype.filter.type = "ValueList"
         samplingtype.filter.list = ["OBSERVATIONS", "CELLSIZE"]
 
-        samplingvalue = arcpy.Parameter(displayName="samplingvalue", name="samplingvalue", datatype="GPDouble",
+        samplingvalue = arcpy.Parameter(displayName="Sampling Resolution", name="samplingvalue", datatype="GPDouble",
                                         parameterType="Required", direction="Input", category="LAS Dataset To Raster Parameters")
         samplingvalue.value = 2
 
